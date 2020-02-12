@@ -16,10 +16,10 @@ func (shi *shareInfo0) Name() string {
 	return shi.shi0Netname
 }
 
-func (fs *RemoteFileSystem) NetShareEnumAll(srvUnc string, level uint32) ShareInfo {
+func (fs *RemoteFileSystem) NetShareEnumAll(srvUnc string, level uint32) {
 	// Only level 0 implemented currently
 	if level != 0 {
-		panic(errors.New("Invalid NetShareEnun level"))
+		panic(errors.New("Invalid NetShareEnum level"))
 	}
 
 	createReq := &CreateRequest{
