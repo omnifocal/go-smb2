@@ -148,7 +148,7 @@ func (fs *RemoteFileSystem) OpenFile(name string, flag int, perm os.FileMode) (*
 		FileAttributes:       FILE_ATTRIBUTE_NORMAL,
 		ShareAccess:          sharemode,
 		CreateDisposition:    createmode,
-		CreateOptions:        FILE_SYNCHRONOUS_IO_NONALERT,
+		CreateOptions:        0,
 	}
 
 	f, err := fs.createFile(name, req, true)
@@ -160,6 +160,69 @@ func (fs *RemoteFileSystem) OpenFile(name string, flag int, perm os.FileMode) (*
 	}
 	return f, nil
 }
+
+//fnord
+
+func (fs *RemoteFileSystem) OpenPipe(name string) (*RemoteFile, error) {
+	if isInvalidPath(name, false) {
+		return nil, os.ErrInvalid
+	}
+
+	var access uint32
+	access = FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_APPEND_DATA | FILE_READ_EA |
+		FILE_WRITE_EA | FILE_READ_ATTRIBUTES | FILE_WRITE_ATTRIBUTES | READ_CONTROL | SYNCHRONIZE
+
+	sharemode := uint32(FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE)
+
+	var createmode uint32
+	createmode = FILE_OPEN
+
+	req := &CreateRequest{
+		SecurityFlags:        0,
+		RequestedOplockLevel: SMB2_OPLOCK_LEVEL_NONE,
+		ImpersonationLevel:   Impersonation,
+		SmbCreateFlags:       0,
+		DesiredAccess:        access,
+		FileAttributes:       0,
+		ShareAccess:          sharemode,
+		CreateDisposition:    createmode,
+		CreateOptions:        0,
+	}
+
+	f, err := fs.createFile(name, req, true)
+	if err != nil {
+		return nil, &os.PathError{Op: "openpipe", Path: name, Err: err}
+	}
+	return f, nil
+}
+
+type byteEncoder []byte
+
+func (b byteEncoder) Encode(outb []byte) {
+	copy(outb, b)
+}
+func (b byteEncoder) Size() int {
+	return len(b)
+}
+
+func (f *RemoteFile) PipeTranceive(input []byte) (output []byte, err error) {
+	var enc byteEncoder = input
+
+	req := &IoctlRequest{
+		CtlCode:           FSCTL_PIPE_TRANSCEIVE,
+		OutputOffset:      120,
+		OutputCount:       0,
+		MaxInputResponse:  0,
+		MaxOutputResponse: 1024,
+		Flags:             SMB2_0_IOCTL_IS_FSCTL,
+		Input:             enc,
+	}
+
+	_, output, err = f.ioctl(req)
+	return
+}
+
+// end fnord
 
 func (fs *RemoteFileSystem) Mkdir(name string, perm os.FileMode) error {
 	if isInvalidPath(name, false) {
