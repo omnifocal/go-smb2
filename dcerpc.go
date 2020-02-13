@@ -48,7 +48,8 @@ type bindRequest struct {
 }
 
 func (ci *ctxItem) marshalLE() []byte {
-	var out, tmp []byte
+	out := []byte{}
+	tmp := make([]byte, 32)
 
 	binary.LittleEndian.PutUint16(tmp, ci.ContextId)
 	out = append(out, tmp...)
@@ -72,7 +73,8 @@ func (ci *ctxItem) marshalLE() []byte {
 }
 
 func (ti *transItem) marshalLE() []byte {
-	var out, tmp []byte
+	out := []byte{}
+	tmp := make([]byte, 32)
 
 	out = append(out, ti.TransSyntax[:]...)
 
@@ -83,7 +85,8 @@ func (ti *transItem) marshalLE() []byte {
 }
 
 func (br *bindRequest) marshalLE() []byte {
-	var out, tmp []byte
+	out := []byte{}
+	tmp := make([]byte, 32)
 
 	out = append(out,
 		br.Version,
