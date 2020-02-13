@@ -3,6 +3,7 @@ package smb2
 // import . "github.com/omnifocal/go-smb2/internal/smb2"
 
 import (
+	"bytes"
 	"encoding/binary"
 
 	// Thank you C-Sto for your suffering
@@ -48,22 +49,19 @@ type bindRequest struct {
 }
 
 func (ci *ctxItem) marshalLE() []byte {
-	out := []byte{}
-	tmp := make([]byte, 4)
+	var err error
+	buf := new(bytes.Buffer)
 
-	binary.LittleEndian.PutUint16(tmp, ci.ContextId)
-	out = append(out, tmp[:2]...)
+	err = binary.Write(buf, binary.LittleEndian, ci.ContextId)
+	err = binary.Write(buf, binary.LittleEndian, ci.NumTransItems)
+	err = binary.Write(buf, binary.BigEndian, ci.InterfaceUuid) // Already in correct byte order
+	err = binary.Write(buf, binary.LittleEndian, ci.InterfaceVer)
+	err = binary.Write(buf, binary.LittleEndian, ci.InterfaceVerMinor)
+	if err != nil {
+		panic(err)
+	}
 
-	binary.LittleEndian.PutUint16(tmp, ci.NumTransItems)
-	out = append(out, tmp[:2]...)
-
-	out = append(out, ci.InterfaceUuid[:]...)
-
-	binary.LittleEndian.PutUint16(tmp, ci.InterfaceVer)
-	out = append(out, tmp[:2]...)
-
-	binary.LittleEndian.PutUint16(tmp, ci.InterfaceVerMinor)
-	out = append(out, tmp[:2]...)
+	out := buf.Bytes()
 
 	for _, v := range ci.transItems {
 		out = append(out, v.marshalLE()...)
