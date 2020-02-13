@@ -2,4 +2,8 @@ module github.com/omnifocal/go-smb2
 
 go 1.12
 
-require golang.org/x/crypto v0.0.0-20190701094942-4def268fd1a4
+require (
+	github.com/C-Sto/goWMIExec v0.0.0-20200211162810-702d1ebe5bee
+	github.com/google/uuid v1.1.1
+	golang.org/x/crypto v0.0.0-20190701094942-4def268fd1a4
+)
