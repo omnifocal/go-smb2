@@ -1,6 +1,7 @@
 package smb2
 
 import (
+	"bytes"
 	"encoding/hex"
 	"testing"
 
@@ -74,5 +75,13 @@ func TestBRMarshal(t *testing.T) {
 		},
 	}
 
-	t.Log(hex.Dump(req.marshalLE()))
+	want, err := hex.DecodeString("05000b0310000000a000000002000000b810b810000000000300000000000100c84f324b7016d30112785a47bf6ee18803000000045d888aeb1cc9119fe808002b1048600200000001000100c84f324b7016d30112785a47bf6ee1880300000033057171babe37498319b5dbef9ccc360100000002000100c84f324b7016d30112785a47bf6ee188030000002c1cb76c12984045030000000000000001000000")
+	if err != nil {
+		t.Error(err)
+	}
+	got := req.marshalLE()
+	t.Log(hex.Dump(got))
+	if bytes.Compare(want, got) != 0 {
+		t.Fail()
+	}
 }

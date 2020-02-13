@@ -49,21 +49,21 @@ type bindRequest struct {
 
 func (ci *ctxItem) marshalLE() []byte {
 	out := []byte{}
-	tmp := make([]byte, 32)
+	tmp := make([]byte, 4)
 
 	binary.LittleEndian.PutUint16(tmp, ci.ContextId)
-	out = append(out, tmp...)
+	out = append(out, tmp[:2]...)
 
 	binary.LittleEndian.PutUint16(tmp, ci.NumTransItems)
-	out = append(out, tmp...)
+	out = append(out, tmp[:2]...)
 
 	out = append(out, ci.InterfaceUuid[:]...)
 
 	binary.LittleEndian.PutUint16(tmp, ci.InterfaceVer)
-	out = append(out, tmp...)
+	out = append(out, tmp[:2]...)
 
 	binary.LittleEndian.PutUint16(tmp, ci.InterfaceVerMinor)
-	out = append(out, tmp...)
+	out = append(out, tmp[:2]...)
 
 	for _, v := range ci.transItems {
 		out = append(out, v.marshalLE()...)
@@ -74,19 +74,19 @@ func (ci *ctxItem) marshalLE() []byte {
 
 func (ti *transItem) marshalLE() []byte {
 	out := []byte{}
-	tmp := make([]byte, 32)
+	tmp := make([]byte, 4)
 
 	out = append(out, ti.TransSyntax[:]...)
 
 	binary.LittleEndian.PutUint32(tmp, ti.Ver)
-	out = append(out, tmp...)
+	out = append(out, tmp[:4]...)
 
 	return out
 }
 
 func (br *bindRequest) marshalLE() []byte {
 	out := []byte{}
-	tmp := make([]byte, 32)
+	tmp := make([]byte, 4)
 
 	out = append(out,
 		br.Version,
@@ -96,29 +96,29 @@ func (br *bindRequest) marshalLE() []byte {
 	)
 
 	// There has to be a better way
-	binary.LittleEndian.PutUint32(tmp, br.DataRepr)
-	out = append(out, tmp...)
+	binary.BigEndian.PutUint32(tmp, br.DataRepr)
+	out = append(out, tmp[:4]...)
 
 	binary.LittleEndian.PutUint16(tmp, br.FragLen)
-	out = append(out, tmp...)
+	out = append(out, tmp[:2]...)
 
 	binary.LittleEndian.PutUint16(tmp, br.AuthLen)
-	out = append(out, tmp...)
+	out = append(out, tmp[:2]...)
 
-	binary.LittleEndian.PutUint16(tmp, br.AuthLen)
-	out = append(out, tmp...)
+	binary.LittleEndian.PutUint32(tmp, br.CallId)
+	out = append(out, tmp[:4]...)
 
 	binary.LittleEndian.PutUint16(tmp, br.MaxXmit)
-	out = append(out, tmp...)
+	out = append(out, tmp[:2]...)
 
 	binary.LittleEndian.PutUint16(tmp, br.MaxRecv)
-	out = append(out, tmp...)
+	out = append(out, tmp[:2]...)
 
 	binary.LittleEndian.PutUint32(tmp, br.AssocGroup)
-	out = append(out, tmp...)
+	out = append(out, tmp[:4]...)
 
 	binary.LittleEndian.PutUint32(tmp, br.NumCtxItems)
-	out = append(out, tmp...)
+	out = append(out, tmp[:4]...)
 
 	for _, v := range br.ctxItems {
 		out = append(out, v.marshalLE()...)
