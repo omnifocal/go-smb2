@@ -54,7 +54,7 @@ func (ci *ctxItem) marshalLE() []byte {
 
 	err = binary.Write(buf, binary.LittleEndian, ci.ContextId)
 	err = binary.Write(buf, binary.LittleEndian, ci.NumTransItems)
-	err = binary.Write(buf, binary.BigEndian, ci.InterfaceUuid) // Already in correct byte order
+	err = binary.Write(buf, binary.LittleEndian, ci.InterfaceUuid) // Byte array gets written in array order
 	err = binary.Write(buf, binary.LittleEndian, ci.InterfaceVer)
 	err = binary.Write(buf, binary.LittleEndian, ci.InterfaceVerMinor)
 	if err != nil {
@@ -71,52 +71,42 @@ func (ci *ctxItem) marshalLE() []byte {
 }
 
 func (ti *transItem) marshalLE() []byte {
-	out := []byte{}
-	tmp := make([]byte, 4)
+	var err error
+	buf := new(bytes.Buffer)
 
-	out = append(out, ti.TransSyntax[:]...)
+	err = binary.Write(buf, binary.LittleEndian, ti.TransSyntax)
+	err = binary.Write(buf, binary.LittleEndian, ti.Ver)
+	if err != nil {
+		panic(err)
+	}
 
-	binary.LittleEndian.PutUint32(tmp, ti.Ver)
-	out = append(out, tmp[:4]...)
+	out := buf.Bytes()
 
 	return out
 }
 
 func (br *bindRequest) marshalLE() []byte {
-	out := []byte{}
-	tmp := make([]byte, 4)
+	var err error
+	buf := new(bytes.Buffer)
 
-	out = append(out,
-		br.Version,
-		br.MinorVersion,
-		br.PacketType,
-		br.PacketFlags,
-	)
+	err = binary.Write(buf, binary.BigEndian, br.Version)
+	err = binary.Write(buf, binary.BigEndian, br.MinorVersion)
+	err = binary.Write(buf, binary.BigEndian, br.PacketType)
+	err = binary.Write(buf, binary.BigEndian, br.PacketFlags)
+	err = binary.Write(buf, binary.BigEndian, br.DataRepr)
+	// Little endian after DataRepr
+	err = binary.Write(buf, binary.LittleEndian, br.FragLen)
+	err = binary.Write(buf, binary.LittleEndian, br.AuthLen)
+	err = binary.Write(buf, binary.LittleEndian, br.CallId)
+	err = binary.Write(buf, binary.LittleEndian, br.MaxXmit)
+	err = binary.Write(buf, binary.LittleEndian, br.MaxRecv)
+	err = binary.Write(buf, binary.LittleEndian, br.AssocGroup)
+	err = binary.Write(buf, binary.LittleEndian, br.NumCtxItems)
+	if err != nil {
+		panic(err)
+	}
 
-	// There has to be a better way
-	binary.BigEndian.PutUint32(tmp, br.DataRepr)
-	out = append(out, tmp[:4]...)
-
-	binary.LittleEndian.PutUint16(tmp, br.FragLen)
-	out = append(out, tmp[:2]...)
-
-	binary.LittleEndian.PutUint16(tmp, br.AuthLen)
-	out = append(out, tmp[:2]...)
-
-	binary.LittleEndian.PutUint32(tmp, br.CallId)
-	out = append(out, tmp[:4]...)
-
-	binary.LittleEndian.PutUint16(tmp, br.MaxXmit)
-	out = append(out, tmp[:2]...)
-
-	binary.LittleEndian.PutUint16(tmp, br.MaxRecv)
-	out = append(out, tmp[:2]...)
-
-	binary.LittleEndian.PutUint32(tmp, br.AssocGroup)
-	out = append(out, tmp[:4]...)
-
-	binary.LittleEndian.PutUint32(tmp, br.NumCtxItems)
-	out = append(out, tmp[:4]...)
+	out := buf.Bytes()
 
 	for _, v := range br.ctxItems {
 		out = append(out, v.marshalLE()...)
