@@ -5,6 +5,8 @@ package smb2
 import (
 	"bytes"
 	"encoding/binary"
+	"fmt"
+	"io"
 
 	// Thank you C-Sto for your suffering
 	"github.com/C-Sto/goWMIExec/pkg/uuid"
@@ -189,4 +191,70 @@ func (f *RemoteFile) rpcBind(intf uuid.UUID, intfVer uint16, intfVerMinor uint16
 	if err != nil {
 		panic(err)
 	}
+
+	syntax, _ := handleBindAck(resp)
+	switch syntax {
+	case ndr32:
+		// Debug prints only
+		fmt.Println("NDR32 syntax")
+	case ndr64:
+		fmt.Println("NDR64 syntax")
+	default:
+		panic(fmt.Errorf("Unsupported transfer syntax UUID: %v", syntax))
+	}
+}
+
+// This is a pretty hacky implementation, should be improved
+func handleBindAck(buf []byte) (syntax uuid.UUID, ver int) {
+	var len uint16
+	var numresults uint32
+	reader := bytes.NewReader(buf)
+
+	// Seek to secondary addr len and read it
+	reader.Seek(0x18, io.SeekStart)
+	err := binary.Read(reader, binary.LittleEndian, &len)
+	if err != nil {
+		panic(err)
+	}
+
+	// Skip to num results and read
+	reader.Seek(int64(len+1), io.SeekCurrent)
+	err = binary.Read(reader, binary.LittleEndian, &numresults)
+	if err != nil {
+		panic(err)
+	}
+
+	for i := 0; i < int(numresults); i++ {
+		var result uint16
+		var uver uint32
+
+		// Read ack result
+		err = binary.Read(reader, binary.LittleEndian, &result)
+		if err != nil {
+			panic(err)
+		}
+		if result != 0 {
+			// Skip to next ctx item
+			reader.Seek(22, io.SeekCurrent)
+			continue
+		}
+
+		// Skip reason and read UUID
+		reader.Seek(2, io.SeekCurrent)
+		uuidbytes := make([]byte, 16)
+		reader.Read(uuidbytes)
+		uuidstring := uuid.FromBytes(uuidbytes)
+
+		// Read syntax ver
+		err = binary.Read(reader, binary.LittleEndian, &uver)
+		if err != nil {
+			panic(err)
+		}
+
+		syntax, err = uuid.FromString(uuidstring)
+		ver = int(uver)
+		return
+	}
+	// If we got no acceptances we end up here
+	return
 }
