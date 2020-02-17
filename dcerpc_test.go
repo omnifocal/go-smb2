@@ -20,18 +20,20 @@ func TestBRMarshal(t *testing.T) {
 	}
 
 	req := &bindRequest{
-		Version:      5,
-		MinorVersion: 0,
-		PacketType:   11,         // Bind
-		PacketFlags:  0x03,       // First frag and last frag set
-		DataRepr:     0x10000000, // Little endian ASCII, IEEE float
-		FragLen:      160,
-		AuthLen:      0,
-		CallId:       2, // Don't know what this is about
-		MaxXmit:      4280,
-		MaxRecv:      4280,
-		AssocGroup:   0,
-		NumCtxItems:  3,
+		rpcHeader: &rpcHeader{
+			Version:      5,
+			MinorVersion: 0,
+			PacketType:   11,         // Bind
+			PacketFlags:  0x03,       // First frag and last frag set
+			DataRepr:     0x10000000, // Little endian ASCII, IEEE float
+			FragLen:      160,
+			AuthLen:      0,
+			CallId:       2, // Don't know what this is about
+		},
+		MaxXmit:     4280,
+		MaxRecv:     4280,
+		AssocGroup:  0,
+		NumCtxItems: 3,
 		ctxItems: []ctxItem{
 			ctxItem{
 				ContextId:         0,

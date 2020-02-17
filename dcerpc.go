@@ -18,6 +18,10 @@ const (
 	UUID_BINDTIME_FEATURENEGO = "6cb71c2c-9812-4540-0300-000000000000"
 )
 
+type Marshaller interface {
+	marshalLE() []byte
+}
+
 type ctxItem struct {
 	ContextId         uint16
 	NumTransItems     uint16
@@ -33,21 +37,43 @@ type transItem struct {
 	Ver         uint32
 }
 
-type bindRequest struct {
+type rpcHeader struct {
 	Version      byte
 	MinorVersion byte
 	PacketType   byte
 	PacketFlags  byte
 	DataRepr     uint32
-	FragLen      uint16
+	FragLen      uint16 // The frag_length field represents the length of the entire PDU, including all of the header, optional header fields, stub body and optional authentication verifier, if applicable.
 	AuthLen      uint16
 	CallId       uint32
-	MaxXmit      uint16
-	MaxRecv      uint16
-	AssocGroup   uint32
-	NumCtxItems  uint32
+}
+
+type bindRequest struct {
+	*rpcHeader
+	MaxXmit     uint16
+	MaxRecv     uint16
+	AssocGroup  uint32
+	NumCtxItems uint32
 
 	ctxItems []ctxItem
+}
+
+type rpcRequest struct {
+	*rpcHeader
+	AllocHint uint32
+	ContextID uint16
+	Opnum     uint16
+
+	StubData Marshaller
+}
+
+type rpcResponse struct {
+	*rpcHeader
+	AllocHint   uint32
+	ContextID   uint16
+	CancelCount uint16
+
+	StubData Marshaller
 }
 
 func (ci *ctxItem) marshalLE() []byte {
@@ -87,19 +113,35 @@ func (ti *transItem) marshalLE() []byte {
 	return out
 }
 
+func (rh *rpcHeader) marshalLE() []byte {
+	var err error
+	buf := new(bytes.Buffer)
+
+	err = binary.Write(buf, binary.BigEndian, rh.Version)
+	err = binary.Write(buf, binary.BigEndian, rh.MinorVersion)
+	err = binary.Write(buf, binary.BigEndian, rh.PacketType)
+	err = binary.Write(buf, binary.BigEndian, rh.PacketFlags)
+	err = binary.Write(buf, binary.BigEndian, rh.DataRepr)
+	// Little endian after DataRepr
+	err = binary.Write(buf, binary.LittleEndian, rh.FragLen)
+	err = binary.Write(buf, binary.LittleEndian, rh.AuthLen)
+	err = binary.Write(buf, binary.LittleEndian, rh.CallId)
+	if err != nil {
+		panic(err)
+	}
+
+	return buf.Bytes()
+}
+
 func (br *bindRequest) marshalLE() []byte {
 	var err error
 	buf := new(bytes.Buffer)
 
-	err = binary.Write(buf, binary.BigEndian, br.Version)
-	err = binary.Write(buf, binary.BigEndian, br.MinorVersion)
-	err = binary.Write(buf, binary.BigEndian, br.PacketType)
-	err = binary.Write(buf, binary.BigEndian, br.PacketFlags)
-	err = binary.Write(buf, binary.BigEndian, br.DataRepr)
-	// Little endian after DataRepr
-	err = binary.Write(buf, binary.LittleEndian, br.FragLen)
-	err = binary.Write(buf, binary.LittleEndian, br.AuthLen)
-	err = binary.Write(buf, binary.LittleEndian, br.CallId)
+	_, err = buf.Write(br.rpcHeader.marshalLE())
+	if err != nil {
+		panic(err)
+	}
+
 	err = binary.Write(buf, binary.LittleEndian, br.MaxXmit)
 	err = binary.Write(buf, binary.LittleEndian, br.MaxRecv)
 	err = binary.Write(buf, binary.LittleEndian, br.AssocGroup)
@@ -126,18 +168,20 @@ func (f *RemoteFile) rpcBind(intf uuid.UUID, intfVer uint16, intfVerMinor uint16
 	}
 
 	req := &bindRequest{
-		Version:      5,
-		MinorVersion: 0,
-		PacketType:   11,         // Bind
-		PacketFlags:  0x03,       // First frag and last frag set
-		DataRepr:     0x10000000, // Little endian ASCII, IEEE float
-		FragLen:      160,
-		AuthLen:      0,
-		CallId:       2, // Don't know what this is about
-		MaxXmit:      4280,
-		MaxRecv:      4280,
-		AssocGroup:   0,
-		NumCtxItems:  3,
+		rpcHeader: &rpcHeader{
+			Version:      5,
+			MinorVersion: 0,
+			PacketType:   11,         // Bind
+			PacketFlags:  0x03,       // First frag and last frag set
+			DataRepr:     0x10000000, // Little endian ASCII, IEEE float
+			FragLen:      160,        // Need to make this dynamic
+			AuthLen:      0,
+			CallId:       2, // Don't know what this is about
+		},
+		MaxXmit:     4280,
+		MaxRecv:     4280,
+		AssocGroup:  0,
+		NumCtxItems: 3,
 		ctxItems: []ctxItem{
 			ctxItem{
 				ContextId:         0,
