@@ -115,67 +115,78 @@ func (br *bindRequest) marshalLE() []byte {
 	return out
 }
 
-// func (fd *RemoteFile) rpcBind(intf uuid.UUID, intfVer uint16, intfVerMinor uint16) (ret ctxItem, err error) {
-// 	ndr32, err := uuid.FromString(UUID_32BIT_NDR_V2)
-// 	ndr64, err := uuid.FromString(UUID_64BIT_NDR_V1)
-// 	bindNego, err := uuid.FromString(UUID_BINDTIME_FEATURENEGO)
-// 	if err != nil {
-// 		panic(err)
-// 	}
+func (f *RemoteFile) rpcBind(intf uuid.UUID, intfVer uint16, intfVerMinor uint16) {
+	ndr32, err := uuid.FromString(UUID_32BIT_NDR_V2)
+	ndr64, err := uuid.FromString(UUID_64BIT_NDR_V1)
+	bindNego, err := uuid.FromString(UUID_BINDTIME_FEATURENEGO)
+	if err != nil {
+		panic(err)
+	}
 
-// 	req := &bindRequest{
-// 		Version:      5,
-// 		MinorVersion: 0,
-// 		PacketType:   11,         // Bind
-// 		PacketFlags:  0x03,       // First frag and last frag set
-// 		DataRepr:     0x10000000, // Little endian ASCII, IEEE float
-// 		FragLen:      160,
-// 		AuthLen:      0,
-// 		CallId:       2, // Don't know what this is about
-// 		MaxXmit:      4280,
-// 		MaxRecv:      4280,
-// 		AssocGroup:   0,
-// 		NumCtxItems:  3,
-// 		ctxItems: []ctxItem{
-// 			ctxItem{
-// 				ContextId:         0,
-// 				NumTransItems:     1,
-// 				InterfaceUuid:     intf,
-// 				InterfaceVer:      intfVer,
-// 				InterfaceVerMinor: intfVerMinor,
-// 				transItems: []transItem{
-// 					transItem{
-// 						TransSyntax: ndr32,
-// 						Ver:         2,
-// 					},
-// 				},
-// 			},
-// 			ctxItem{
-// 				ContextId:         1,
-// 				NumTransItems:     1,
-// 				InterfaceUuid:     intf,
-// 				InterfaceVer:      intfVer,
-// 				InterfaceVerMinor: intfVerMinor,
-// 				transItems: []transItem{
-// 					transItem{
-// 						TransSyntax: ndr64,
-// 						Ver:         1,
-// 					},
-// 				},
-// 			},
-// 			ctxItem{
-// 				ContextId:         2,
-// 				NumTransItems:     1,
-// 				InterfaceUuid:     intf,
-// 				InterfaceVer:      intfVer,
-// 				InterfaceVerMinor: intfVerMinor,
-// 				transItems: []transItem{
-// 					transItem{
-// 						TransSyntax: bindNego,
-// 						Ver:         1,
-// 					},
-// 				},
-// 			},
-// 		},
-// 	}
-// }
+	req := &bindRequest{
+		Version:      5,
+		MinorVersion: 0,
+		PacketType:   11,         // Bind
+		PacketFlags:  0x03,       // First frag and last frag set
+		DataRepr:     0x10000000, // Little endian ASCII, IEEE float
+		FragLen:      160,
+		AuthLen:      0,
+		CallId:       2, // Don't know what this is about
+		MaxXmit:      4280,
+		MaxRecv:      4280,
+		AssocGroup:   0,
+		NumCtxItems:  3,
+		ctxItems: []ctxItem{
+			ctxItem{
+				ContextId:         0,
+				NumTransItems:     1,
+				InterfaceUuid:     intf,
+				InterfaceVer:      intfVer,
+				InterfaceVerMinor: intfVerMinor,
+				transItems: []transItem{
+					transItem{
+						TransSyntax: ndr32,
+						Ver:         2,
+					},
+				},
+			},
+			ctxItem{
+				ContextId:         1,
+				NumTransItems:     1,
+				InterfaceUuid:     intf,
+				InterfaceVer:      intfVer,
+				InterfaceVerMinor: intfVerMinor,
+				transItems: []transItem{
+					transItem{
+						TransSyntax: ndr64,
+						Ver:         1,
+					},
+				},
+			},
+			ctxItem{
+				ContextId:         2,
+				NumTransItems:     1,
+				InterfaceUuid:     intf,
+				InterfaceVer:      intfVer,
+				InterfaceVerMinor: intfVerMinor,
+				transItems: []transItem{
+					transItem{
+						TransSyntax: bindNego,
+						Ver:         1,
+					},
+				},
+			},
+		},
+	}
+
+	_, err = f.Write(req.marshalLE())
+	if err != nil {
+		panic(err)
+	}
+
+	resp := make([]byte, 1024)
+	_, err = f.Read(resp)
+	if err != nil {
+		panic(err)
+	}
+}
